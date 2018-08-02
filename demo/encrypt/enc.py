@@ -1,6 +1,6 @@
 import pefile
 
-pth = r"C:\Users\pzhxb\Desktop\kyrios_SGX\Github\SGX-Protect\demo\\"
+pth = r"C:\Users\pzhxb\Desktop\kyrios_SGX\Github\SGX-Protect\demo\exetest\\"
 pe_name = 'restore.exe'
 pe_map = 'restore.map'
 pe = pefile.PE(pth + pe_name)
@@ -33,12 +33,9 @@ for idx, line in enumerate(binmap):
             offs_list.append((start, end))
 
 for offs in offs_list:
-    print hex(offs[0]), hex(offs[1]) # log.success
     func_bytes = pe.get_memory_mapped_image()[offs[0]:offs[1]]
     for idx, byte in enumerate(func_bytes):
         enc_byte = ord(byte)^ord(enc_key[idx%klen])
         pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(enc_byte)))
 
 pe.write(filename='enc.exe')
-
-

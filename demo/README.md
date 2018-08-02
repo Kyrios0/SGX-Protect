@@ -1,14 +1,12 @@
 # SGX-Protect Demo
 
-- First generate the normal .exe at here
+- First generate the normal .exe/.dll at here
 
 
-- run enc.py with normal.exe to get enc.exe (you can release it)
+- run enc.py with normal.exe (and .map) to get enc.exe (you can release it)
 
 
-- run TLS module to get the key
+- run enc.exe TLS module to get the key
 
 
-- run restore.cpp with key to decrypt enc.exe and execute it.
-
->
+- run restore function in enc.exe with key to decrypt other function in enc.exe then you can execute it.
