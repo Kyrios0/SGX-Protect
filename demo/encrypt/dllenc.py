@@ -2,11 +2,11 @@
 import pefile
 import os
 
-pth = r'C:\Users\pzhxb\Desktop\kyrios_SGX\vs\enclave_hw2\Debug\\'
-pe_name = 'enclave_hw2.dll'
-pe_map = 'enclave_hw2.map'
-pe_xml = 'enclave_hw2.config.xml'
-key_file = 'enclave_hw2_private.pem'
+pth = r'C:\Users\pzhxb\Desktop\kyrios_SGX\Github\SGX-Protect\demo\\'
+pe_name = 'enclave_hw3.dll'
+pe_map = 'enclave_hw3.map'
+pe_xml = 'enclave_hw3.config.xml'
+key_file = 'enclave_hw3_private.pem'
 pe = pefile.PE(pth + pe_name)
 with open(pth + pe_map, 'rb') as f:
     binmap = f.readlines()
@@ -33,16 +33,21 @@ for idx, line in enumerate(binmap): # To-Do: speed optimize
     if len(line) < 2:
         continue
     for func in func_list:
-        if func in line[1]: # To-Do: exception - if line is the last function of current section...
+        if func == line[1]: # To-Do: exception - if line is the last function of current section...
             start = text_base + int(line[0].split(':')[1], 16)
             end = text_base + int(binmap[idx+1].split()[0].split(':')[1], 16)
             offs_list.append((start, end))
 
+enc_bytes = [] # DEBUG
 for offs in offs_list:
-    func_bytes = pe.get_memory_mapped_image()[offs[0]:offs[1]]
+    func_bytes = pe.get_memory_mapped_image()[offs[0]+0xc00:offs[1]+0xc00] # why 0xc00?
     for idx, byte in enumerate(func_bytes):
         enc_byte = ord(byte)^ord(enc_key[idx%klen])
-        pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(enc_byte)))
+        print "%x: %02x = %02x ^ %02x" % (offs[0]+idx, enc_byte, ord(byte), ord(enc_key[idx%klen]))
+        enc_bytes.append(chr(enc_byte)) # DEBUG
+        pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(0)))
+with open('func1.secret', 'wb') as f: # DEBUG
+    f.write(''.join(enc_bytes))         # DEBUG
 
 pe.write(filename='enc.dll')
 

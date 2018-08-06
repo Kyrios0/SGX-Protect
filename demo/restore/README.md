@@ -1,0 +1,4 @@
+- restore.cpp: for .exe restore function test
+- app.cpp: for enclave .dll restore funtion test
+  - enclave.edl
+  - enclave.cpp

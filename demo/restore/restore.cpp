@@ -41,7 +41,6 @@ int restore(char* key, int keyLen, unsigned char* oFunc, int funcLen) {
 		if (func[i] == RET) { // To-Do: exception - if function have multiple RET
 			break;
 		}
-
 	}
 	return 0;
 }
