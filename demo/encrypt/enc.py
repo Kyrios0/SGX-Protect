@@ -13,7 +13,8 @@ func_list = ['testFunc']
 offs_list = []
 
 # close base-addr randomization
-pe.OPTIONAL_HEADER.DllCharacteristics &= 0xff00
+# test anti-randomization mode
+# pe.OPTIONAL_HEADER.DllCharacteristics &= 0xff00
 
 # set .text section writable
 for section in pe.sections:
@@ -33,10 +34,15 @@ for idx, line in enumerate(binmap): # To-Do: speed optimize
             end = text_base + int(binmap[idx+1].split()[0].split(':')[1], 16)
             offs_list.append((start, end))
 
-for offs in offs_list:
+enc_bytes = [] # DEBUG
+for offs in offs_list: # To-Do: process functions
     func_bytes = pe.get_memory_mapped_image()[offs[0]:offs[1]]
     for idx, byte in enumerate(func_bytes):
         enc_byte = ord(byte)^ord(enc_key[idx%klen])
-        pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(enc_byte)))
+        enc_bytes.append(chr(enc_byte)) # DEBUG
+        pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(0)))
+
+with open('testfunc1.secret', 'wb') as f: # DEBUG
+    f.write(''.join(enc_bytes))         # DEBUG
 
 pe.write(filename='enc.exe')
