@@ -9,7 +9,9 @@ with open(pth + pe_map, 'rb') as f:
 
 enc_key = '123456'
 klen = len(enc_key)
-func_list = ['testFunc']
+with open('whiteList.txt') as f:
+    func_list = [line.split('\n')[0] for line in f.readlines()]
+print 'load functions:', func_list
 offs_list = []
 
 # close base-addr randomization
@@ -29,20 +31,19 @@ for idx, line in enumerate(binmap): # To-Do: speed optimize
     if len(line) < 2:
         continue
     for func in func_list:
-        if func in line[1]: # To-Do: exception - if line is the last function of current section...
+        if (func+'@') in line[1]: # To-Do: exception - if line is the last function of current section...
             start = text_base + int(line[0].split(':')[1], 16)
             end = text_base + int(binmap[idx+1].split()[0].split(':')[1], 16)
             offs_list.append((start, end))
 
-enc_bytes = [] # DEBUG
-for offs in offs_list: # To-Do: process functions
+for func_id, offs in enumerate(offs_list):
+    enc_bytes = []
     func_bytes = pe.get_memory_mapped_image()[offs[0]:offs[1]]
     for idx, byte in enumerate(func_bytes):
         enc_byte = ord(byte)^ord(enc_key[idx%klen])
-        enc_bytes.append(chr(enc_byte)) # DEBUG
+        enc_bytes.append(chr(enc_byte))
         pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(0)))
-
-with open('testfunc1.secret', 'wb') as f: # DEBUG
-    f.write(''.join(enc_bytes))         # DEBUG
-
+    with open(func_list[func_id]+'.secret', 'wb') as f:
+        f.write(''.join(enc_bytes))
+print 'Success.'
 pe.write(filename='enc.exe')
