@@ -4,11 +4,12 @@ enclave {
     trusted {
         /* define ECALLs here. */
 		public void hello_sgx([out, size=12]char *des);
-		public void give_me_pointer([in, size=funcLen]unsigned char *sFunc, int funcLen);
+		public void bye_sgx([out, size=12]char *des);
+		public void give_me_pointer([in, size=keyLen]char* key, int keyLen, [in, size=totalOff]unsigned char* rFuncList, [in, size=400]int* offList, int totalOff);
     };
 
     untrusted {
         /* define OCALLs here. */
-		void unsafe_printf([in, size=20]char* str);
+		void unsafe_printf([in, size=50]char* str);
     };
 };

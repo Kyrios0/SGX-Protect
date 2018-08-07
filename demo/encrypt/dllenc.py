@@ -13,7 +13,9 @@ with open(pth + pe_map, 'rb') as f:
 
 enc_key = '123456'
 klen = len(enc_key)
-func_list = ['_hello_sgx'] # To-Do: process _func_name
+with open('SGXWhiteList.txt') as f:
+    func_list = [line.split('\n')[0] for line in f.readlines()]
+func_list = ['_'+func for func in func_list] # SGX func_name start with _
 offs_list = []
 
 # close base-addr randomization
@@ -38,16 +40,15 @@ for idx, line in enumerate(binmap): # To-Do: speed optimize
             end = text_base + int(binmap[idx+1].split()[0].split(':')[1], 16)
             offs_list.append((start, end))
 
-enc_bytes = [] # DEBUG
-for offs in offs_list:
+for func_id, offs in enumerate(offs_list):
+    enc_bytes = []
     func_bytes = pe.get_memory_mapped_image()[offs[0]+0xc00:offs[1]+0xc00] # why 0xc00?
     for idx, byte in enumerate(func_bytes):
         enc_byte = ord(byte)^ord(enc_key[idx%klen])
-        print "%x: %02x = %02x ^ %02x" % (offs[0]+idx, enc_byte, ord(byte), ord(enc_key[idx%klen]))
-        enc_bytes.append(chr(enc_byte)) # DEBUG
+        enc_bytes.append(chr(enc_byte))
         pe.set_bytes_at_offset(offs[0]+idx, bytes(chr(0)))
-with open('func1.secret', 'wb') as f: # DEBUG
-    f.write(''.join(enc_bytes))         # DEBUG
+    with open(func_list[func_id][1:]+'.secret', 'wb') as f:
+        f.write(''.join(enc_bytes))
 
 pe.write(filename='enc.dll')
 

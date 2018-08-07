@@ -1,3 +1,6 @@
+// app_hw3.cpp : console app entry
+//
+
 #include "stdafx.h"
 #include "enclave_hw3_u.h"
 #include "sgx_capable.h"
@@ -10,6 +13,7 @@ sgx_launch_token_t token = { 0 };
 int updated;
 
 void unsafe_printf(char* str) {
+	printf("from SGX: ");
 	puts(str);
 }
 
@@ -34,6 +38,14 @@ bool destroyEnclave() {
 		return false;
 	return true;
 }
+
+int getFileLen(FILE *fp) { // waiting for test
+	fseek(fp, 0L, SEEK_END);
+	int size = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+	return size;
+}
+
 int main() {
 	sgx_status_t ret = SGX_SUCCESS;
 	if (!initializeEnclave()) {
@@ -42,14 +54,40 @@ int main() {
 		return -1;
 	}
 	char des[20] = { 0 };
-	unsigned char func[0x60] = { 0 };
-	int funcLen = 0x60;
-	FILE *f = fopen("func1.secret", "rb"); // To-Do: process functions
-	for (int i = 0; i < funcLen; i++) {
-		func[i] = fgetc(f);
+	char key[] = "123456"; // To-Do: TLS - RSA module
+
+	FILE *whiteList = fopen("SGXWhiteList.txt", "r");
+	char funcName[MAX_FUNC_NAME_LEN] = { 0 };
+	unsigned char* funcList[MAX_FUNC_COUNTS] = { 0 };
+	int offList[MAX_FUNC_COUNTS] = { 0 };
+	int totalOff = 0;
+	for (int funcID = 0; fgets(funcName, 100, whiteList) != NULL; funcID++) {
+		char *ent = 0;
+		if ((ent = strstr(funcName, "\n")) != NULL) { // funcName.replace('\n', '\0')
+			*ent = 0;
+		}
+		strcat(funcName, ".secret");
+		printf("read file: %s\n", funcName); // LOG
+		FILE *funcSecretFile = fopen(funcName, "r");
+		int funcLen = getFileLen(funcSecretFile);
+		unsigned char *funcSecret = (unsigned char*)malloc(funcLen);
+		fread(funcSecret, 1, funcLen, funcSecretFile);
+		funcList[funcID] = funcSecret;
+		offList[funcID] = funcLen;
+		totalOff += funcLen;
 	}
-	give_me_pointer(enclaveId, func, funcLen);
+	unsigned char *rFuncList = (unsigned char*)malloc(totalOff);
+	unsigned char *rp = rFuncList;
+	for (int funcID = 0; funcID < MAX_FUNC_COUNTS && offList[funcID] > 0; funcID++) {
+		memcpy(rp, funcList[funcID], offList[funcID]);
+		rp += offList[funcID];
+	}
+
+	give_me_pointer(enclaveId, key, strlen(key), rFuncList, offList, totalOff);
+
 	hello_sgx(enclaveId, des);
+	printf("%s\n", des);
+	bye_sgx(enclaveId, des);
 	printf("%s\n", des);
 	if (!destroyEnclave()) {
 		printf("failed to destory sgx\n");
