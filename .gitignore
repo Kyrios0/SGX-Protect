@@ -1,6 +1,5 @@
 
 *.exe
-*.txt
 *.map
 *.dll
 *.pem
@@ -13,3 +12,6 @@
 *.til
 *.secret
 *.pdb
+demo/exetest/pe.txt
+demo/dlltest/dll.txt
+demo/tmp/*
