@@ -59,9 +59,9 @@ while True:
 
     # normal communication
     while True:
-        msg = sub_sock.recv(MAX_RECV)
+        msg = kenc(sub_sock.recv(MAX_RECV), conn_key)
         print str(client_addr)+':', msg # DEBUG
-        sub_sock.send(msg)
+        sub_sock.send(kenc(msg, conn_key))
         print 'Replied.'
         if msg.split(' ')[0] == 'cmd':
             if ''.join(msg.split(' ')[1:]) == 'quit':
