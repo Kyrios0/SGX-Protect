@@ -16,6 +16,8 @@
 #pragma comment(lib,"WS2_32.lib")
 
 #define ENCLAVE_FILE _T("enclave_demo.signed.dll")
+#define MAX_FUNC_NAME_LEN 100
+#define MAX_FUNC_COUNTS 100
 sgx_enclave_id_t enclaveId = NULL;
 sgx_launch_token_t token = { 0 };
 int updated;
@@ -134,6 +136,13 @@ bool destroyEnclave() {
 	return true;
 }
 
+int getFileLen(FILE *fp) { 
+	fseek(fp, 0L, SEEK_END);
+	int size = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+	return size;
+}
+
 int main()
 {
 	sgx_status_t ret = SGX_SUCCESS;
@@ -142,7 +151,7 @@ int main()
 		system("pause");
 		return -1;
 	}
-	/*char des[20] = { 0 };
+	char des[20] = { 0 };
 	char key[] = "123456"; // To-Do: TLS - RSA module
 
 	FILE *whiteList = fopen("SGXWhiteList.txt", "r");
@@ -173,7 +182,7 @@ int main()
 	}
 
 	restore(enclaveId, key, strlen(key), rFuncList, offList, totalOff);
-	*/
+
 	signClient(enclaveId);
 	if (!destroyEnclave()) {
 		printf("failed to destory sgx\n");
@@ -182,3 +191,4 @@ int main()
 	system("pause");
 	return 0;
 }
+

@@ -17,3 +17,4 @@ demo/dlltest/dll.txt
 demo/tmp/*
 server/client.py
 .vscode/*
+*.7z
