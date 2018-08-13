@@ -1,0 +1,26 @@
+enclave {
+	from "sgx_tsgxssl.edl" import *; 
+    trusted {
+        /* define ECALLs here. */
+		public void signClient();
+		public void restore([in, size=keyLen]char* key, int keyLen, [in, size=totalOff]unsigned char* rFuncList, [in, size=400]int* offList, int totalOff);
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+		void unsafe_getPubKeyLen([out]int* ret);
+		void unsafe_getPrivKeyLen([out]int* ret);
+		void unsafe_getPubKey([out, size=keyLen]char* rsaPubKey, int keyLen);
+		void unsafe_getPrivKey([out, size=keyLen]char* rsaPrivKey, int keyLen);
+
+		void unsafe_puts([in, size=50]char* str);
+		void unsafe_printL([in, size=256]unsigned char* str, int len);
+		int unsafe_fgets([out, size=50]char *str);
+
+		int unsafe_initSocket([out]int *skt,[string,in] char* ip, int port);
+		int unsafe_closeSocket(int s);
+		int unsafe_send(int skt, [in, size=bufLen]char *buf, int bufLen, int flags);
+		int unsafe_recv(int skt, [out, size=bufLen]char* buf, int bufLen, int flags);
+		
+    };
+};

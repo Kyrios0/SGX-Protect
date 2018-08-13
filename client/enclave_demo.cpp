@@ -5,8 +5,6 @@
 #include <windows.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-//#include <WinSock2.h>
-//#include <WS2tcpip.h>
 #include "sgx_trts.h"
 
 #define MAX_RECV 2048
@@ -19,14 +17,19 @@
 #define RET 0xc3
 #define MAX_FUNC_COUNTS 100
 
-
 int kcmp(unsigned char* data, unsigned char* key, int len) {
+	// ret 1: check pass, ret 0: check failed.
+	// To-Do: cmp strlen.
+	if (len < 0) {
+		unsafe_puts("Error: invalid cmp.");
+		return -1;
+	}
 	for (int i = 0; i < len; i++) {
 		if (data[i] != key[i]) {
-			return 1;
+			return 0;
 		}
 	}
-	return 0;
+	return 1;
 }
 
 void kenc(unsigned char* data, unsigned char* key, int len) {
@@ -40,7 +43,7 @@ RSA* loadPubKey(char* pks) {
 	BIO* bio = BIO_new_mem_buf((void*)pks, -1); // -1: assume string is null terminated
 	BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // NO NL
 
-	RSA* rsaPubKey = PEM_read_bio_RSA_PUBKEY(bio, NULL, NULL, NULL); // Load the RSA key from the BIO
+	RSA* rsaPubKey = PEM_read_bio_RSAPublicKey(bio, NULL, NULL, NULL); // Load the RSA key from the BIO
 	if (!rsaPubKey) {
 		unsafe_puts("ERROR: Could not load PUBLIC KEY!");
 	}
@@ -50,9 +53,10 @@ RSA* loadPubKey(char* pks) {
 }
 
 void signClient() {
-	char *rsaPubKeyStr = 0;
-	int *pubKeyLen = 0;
+	int *pubKeyLen = (int*)malloc(sizeof(int));
+	*pubKeyLen += 4;
 	unsafe_getPubKeyLen(pubKeyLen);
+	char *rsaPubKeyStr = (char*)malloc(*pubKeyLen);
 	unsafe_getPubKey(rsaPubKeyStr, *pubKeyLen);
 
 	// initRSA
@@ -62,8 +66,8 @@ void signClient() {
 
 	char *servAddr = "127.0.0.1";
 	int servPort = 10240;
-	int *sock = 0;
-	int *intRet = 0;
+	int *sock = (int*)malloc(sizeof(int));
+	int *intRet = (int*)malloc(sizeof(int));
 	unsafe_initSocket(intRet, sock, servAddr, servPort);
 	unsafe_puts("Connected!");
 
@@ -99,38 +103,42 @@ void signClient() {
 	unsigned char *done = (unsigned char*)malloc(KEY_LEN);
 	memcpy(resp, msgBuff, KEY_LEN);
 	memcpy(done, msgBuff + KEY_LEN, strlen(SERVER_DONE));
-	kenc(resp, preKey, KEY_LEN);
-	if (!kcmp(resp, clieChall, KEY_LEN)) {
+	kenc(resp, connKey, KEY_LEN);
+	if (kcmp(resp, clieChall, KEY_LEN)) {
 		unsafe_puts("Challenge pass!");
 	}
 	else {
 		unsafe_puts("Error: Shakehand Fail - Challenge Failed.");
-		// exit(0);
+		return; // EXIT
 	}
-	if (!kcmp(done, (unsigned char*)SERVER_DONE, strlen(SERVER_DONE))) {
+	if (kcmp(done, (unsigned char*)SERVER_DONE, strlen(SERVER_DONE))) {
 		unsafe_puts("Shakehand success.");
 	}
 	else {
 		unsafe_puts("Error: Shakehand Fail - Server Done Failed");
-		// exit(0);
+		return; // EXIT
 	}
 
 	char *outBuff = (char*)malloc(50);
-
+	unsigned char *cmdQuit = (unsigned char*)"quit";
+	unsigned char *cmdCmdQuit = (unsigned char*)"cmd quit";
+	kenc(cmdQuit, connKey, 4);
+	kenc(cmdCmdQuit, connKey, 8);
 
 	while (true) {
-		unsafe_scanf(intRet, (char*)msgBuff);
+		unsafe_fgets(intRet, (char*)msgBuff);
 		kenc(msgBuff, connKey, *intRet);
 		unsafe_send(intRet, *sock, (char*)msgBuff, *intRet, 0);
-		if (kcmp(msgBuff, (unsigned char*)"quit", strlen("quit")) || kcmp(msgBuff, (unsigned char*) "cmd quit", strlen("cmd quit"))) {
+		if (kcmp(msgBuff, cmdQuit, strlen("quit")) ||
+			kcmp(msgBuff, cmdCmdQuit, strlen("cmd quit"))) {
+			unsafe_puts("Quit recvd. Bye.");
 			return;
 		}
 		unsafe_recv(intRet, *sock, (char*)msgBuff, MAX_RECV, 0);
 		kenc(msgBuff, connKey, *intRet);
-		unsafe_puts(outBuff);
+		unsafe_puts((char*)msgBuff);
 
 	}
-
 }
 
 void restore(char* key, int keyLen, unsigned char* rFuncList, int* offList, int totalOff) {
@@ -157,8 +165,8 @@ void restore(char* key, int keyLen, unsigned char* rFuncList, int* offList, int 
 		resBase -= offList[funcID];
 		snprintf(outBuffer, 50, "id: %d, base: %08x", funcID, resBase);
 		unsafe_puts(outBuffer);
-		unsigned char *func = resBase; // To-Do: process var name func - resBase
-		unsigned char *sFunc = funcList[funcID]; // To-Do: process var name sFunc - funcList[funcID]
+		unsigned char *func = resBase; // To-Do: process var name [func - resBase]
+		unsigned char *sFunc = funcList[funcID]; // To-Do: process var name [sFunc - funcList[funcID]]
 		int overflow = 0;
 		for (int i = 0; ; i++) {
 			func[i] += (sFunc[i] ^ key[i%keyLen] + overflow);
