@@ -9,12 +9,31 @@ SERVER_HELLO = 'Hello, client.'
 CLIENT_DONE = 'Done, server.'
 SERVER_DONE = 'Done, client.'
 
+def rc4(data, key):
+    """RC4 encryption and decryption method."""
+    S, j, out = list(range(256)), 0, []
+
+    for i in range(256):
+        j = (j + S[i] + ord(key[i % len(key)])) % 256
+        S[i], S[j] = S[j], S[i]
+
+    i = j = 0
+    for ch in data:
+        i = (i + 1) % 256
+        j = (j + S[i]) % 256
+        S[i], S[j] = S[j], S[i]
+        out.append(chr(ord(ch) ^ S[(S[i] + S[j]) % 256]))
+    return "".join(out)
+
 def kenc(data, key):
+    """ easy xor
     enc = []
     key_len = len(key)
     for idx, ch in enumerate(data):
         enc.append(chr(ord(ch)^ord(key[idx%key_len])))
     return ''.join(enc)
+    """
+    return rc4(data, key)
 
 with open('tls_private_key_2048.pem', 'rb') as privatefile:
     priv_key_data = privatefile.read()
