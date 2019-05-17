@@ -2,17 +2,17 @@ import socket
 import rsa
 import os
 
-MAX_RECV = 2048
-KEY_LEN = 96 # To-Do: exchange KEY_LEN
+MAX_RECV = 2048 # 2048
+KEY_LEN = 16 # 96 To-Do: exchange KEY_LEN
 CLIENT_HELLO = 'Hello, server.'
 SERVER_HELLO = 'Hello, client.'
 CLIENT_DONE = 'Done, server.'
 SERVER_DONE = 'Done, client.'
+SGX_key = '*'
 
 def rc4(data, key):
     """RC4 encryption and decryption method."""
     S, j, out = list(range(256)), 0, []
-
     for i in range(256):
         j = (j + S[i] + ord(key[i % len(key)])) % 256
         S[i], S[j] = S[j], S[i]
@@ -76,17 +76,10 @@ while True:
         exit()
     print 'Shakehand Success.'
 
-    # normal communication
-    while True:
-        msg = kenc(sub_sock.recv(MAX_RECV), conn_key)
-        print str(client_addr)+':', msg # DEBUG
-        sub_sock.send(kenc(msg, conn_key))
-        print 'Replied.'
-        if msg.split(' ')[0] == 'cmd':
-            if ''.join(msg.split(' ')[1:]) == 'quit':
-                exit()
-        elif msg.split(' ')[0] == 'quit':
-            break;
+    # deliver key
+    sub_sock.send(kenc(SGX_key, conn_key))
+    print 'key delivered:', SGX_key
     sub_sock.close()
+    exit()
 
 sock.close()
