@@ -1,8 +1,12 @@
 enclave {
-	from "sgx_tsgxssl.edl" import *; 
+	from "sgx_tssl.edl" import *; 
+
     trusted {
         /* define ECALLs here. */
+		public void getKey([in, out, size=16]unsigned char* key);
 		public void signClient();
+		public void perfXTest(int len);
+		public void perfTest(int len);
 		public void restore([in, size=keyLen]char* key, int keyLen, [in, size=totalOff]unsigned char* rFuncList, [in, size=400]int* offList, int totalOff);
     };
 
