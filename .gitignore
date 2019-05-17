@@ -1,4 +1,3 @@
-
 *.exe
 *.map
 *.dll
@@ -17,4 +16,5 @@ demo/dlltest/dll.txt
 demo/tmp/*
 server/client.py
 .vscode/*
+*/.vscode/*
 *.7z
