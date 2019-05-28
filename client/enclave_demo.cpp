@@ -22,13 +22,11 @@
 
 int kcmp(unsigned char* data, unsigned char* key, int len) {
 	// ret 1: check pass, ret 0: check failed.
-	// len--;
-	// To-Do: cmp strlen.
-	// unsafe_puts("[d] kc");
 	if (len < 0) {
 		unsafe_puts("Error: invalid cmp.");
 		return -1;
 	}
+
 	for (int i = 0; i < len; i++) {
 		if (data[i] != key[i]) {
 			return 0;
@@ -38,9 +36,6 @@ int kcmp(unsigned char* data, unsigned char* key, int len) {
 }
 
 void swap_char(unsigned char &a, unsigned char &b) {
-	/*a ^= b;
-	b ^= a;
-	a ^= b;*/
 	unsigned char c=a;
 	a=b;
 	b=c;
@@ -184,7 +179,6 @@ void getKey(unsigned char *key) {
 	kenc(cmdQuit, connKey, 4);
 	kenc(cmdCmdQuit, connKey, 8);
 
-	// recv key
 	unsafe_recv(intRet, *sock, (char*)msgBuff, MAX_RECV, 0);
 	kenc(msgBuff, connKey, *intRet);
 	unsafe_puts("key accepted.");
@@ -194,7 +188,6 @@ void getKey(unsigned char *key) {
 	}
 	return;
 }
-
 
 void signClient() {
 	int *pubKeyLen = (int*)malloc(sizeof(int));
@@ -224,10 +217,10 @@ void signClient() {
 	memcpy(encBuff + strlen(CLIENT_HELLO), preKey, KEY_LEN);
 	cipherLen = RSA_public_encrypt(strlen(CLIENT_HELLO) + KEY_LEN, encBuff, msgBuff, rsa, RSA_PKCS1_PADDING);
 	unsafe_send(intRet, *sock, (char*)msgBuff, cipherLen, 0);
-	
+
 	memset(msgBuff, 0, MAX_RECV);
 	unsafe_recv(intRet, *sock, (char*)msgBuff, MAX_RECV, 0);
-	
+
 	kenc(msgBuff, preKey, MAX_RECV);
 	
 	unsigned char *connKey = (unsigned char*)malloc(KEY_LEN);
@@ -294,6 +287,7 @@ void signClient() {
 void perfXTest(int len) {
 	for (int i = 0; i < len; i++) {
 		if (aes_perf_test()) {
+		// if (sm4_perf_test()) {
 			unsafe_puts("Performance Test Failed.");
 			return;
 		}
@@ -304,6 +298,7 @@ void perfXTest(int len) {
 void perfTest(int len) {
 	for (int i = 0; i < len; i++) {
 		if (aes_perf_test()) {
+		// if (sm4_perf_test()) {
 			unsafe_puts("Performance Test X Failed.");
 			return;
 		}
@@ -311,7 +306,11 @@ void perfTest(int len) {
 	unsafe_puts("Performance Test X Completed.");
 }
 
-void restore(char* key, int keyLen, unsigned char* rFuncList, int* offList, int totalOff) {
+void restore(unsigned char* rFuncList, int* offList, int totalOff) {
+	char key[KEY_LEN];
+	getKey((unsigned char*)key);
+	unsafe_puts("key accepted.");
+	unsafe_puts((char*)key);
 	char *outBuffer = (char*)malloc(50);
 	for (int i = 0; i < MAX_FUNC_COUNTS; i++) {
 		if (offList[i] != 0) {
@@ -339,17 +338,26 @@ void restore(char* key, int keyLen, unsigned char* rFuncList, int* offList, int 
 		unsigned char *sFunc = funcList[funcID]; // To-Do: process var name [sFunc - funcList[funcID]]
 		int overflow = 0;
 		for (int i = 0; ; i++) {
-			func[i] += (sFunc[i] ^ key[i%keyLen] + overflow);
+			/*
+			if (i < 10) { // DEBUG
+				snprintf(outBuffer, 50, "[d]: func[%d]=%02x.", i, func[i]);
+				unsafe_puts(outBuffer);
+			}
+			*/
+			func[i] += (sFunc[i] ^ key[i%KEY_LEN] + overflow);
 			
 			overflow = 0;
-			if (func[i] < (sFunc[i] ^ key[i%keyLen])) { // overflow
+			if (func[i] < (sFunc[i] ^ key[i%KEY_LEN])) { // overflow
 				overflow = 0;
 			}
 			if (func[i] == RET) { // To-Do: exception - if function have multiple RET
 				break;
-			}		
+			}
+			
+			
+			
 		}
 	}
-	snprintf(outBuffer, 50, "Restore Completed.");
+	snprintf(outBuffer, 50, "[d]: restore completed.");
 	unsafe_puts(outBuffer);
 }
